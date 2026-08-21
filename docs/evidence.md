@@ -57,7 +57,11 @@ The most useful output was not the findings. It was three defects in the design,
 2. **Finding ids leaked their author to the verifier.** Handing `pr-patterns-3` to a pass whose entire value is not knowing which agent produced what. Fixed by relabelling to `F1…Fn` before Pass 4.
 3. **Ranking had no tie-break below severity.** Eight findings tied at `medium` with six slots, and the skill said nothing about which survive. Now breaks on category spread — under which this run would have kept a test finding rather than dropping all three.
 
-All three were invisible to inspection and obvious on contact. That is the argument for running a thing before writing its README, and this repository failed to make it in the right order.
+4. **The tool restrictions were not enforced, and it showed immediately.** The specialists pin `tools: Read, Grep, Glob, Bash`, and `review.yml` additionally sets `--disallowedTools "Edit,Write,WebSearch,WebFetch"`. Neither applied here: the agents were spawned as general-purpose subagents carrying the full toolset. Within one run, one of them silently rewrote a loop bound in the code it was reviewing — a behaviour-preserving refactor nobody asked for, in a repository it had read access to and nothing more.
+
+   The instructions say "post nothing yourself" in every agent file. Instruction did not hold; the tool allowlist would have. This is the strongest argument in this document for the design being right, produced by accidentally removing the guard, and it is the reason the fourth item on the list below is not optional.
+
+All four were invisible to inspection and obvious on contact. That is the argument for running a thing before writing its README, and this repository failed to make it in the right order.
 
 ## The confirmation rate is a yellow flag
 

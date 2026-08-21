@@ -2,7 +2,11 @@
 
 A pull request reviewer that measures its own precision, and learns from what humans actually did with its comments.
 
-**No precision figure exists.** The pipeline has been run once, on a real 3,233-line change — `docs/evidence.md` has what it found, what it cost, and the three defects it exposed in its own design. But nothing was posted to a pull request, so nobody has accepted or rejected a finding, so the metric this project is built around is still undefined. Read that document first if you are here to find out whether this works: the rest of this file describes a design, not a result.
+**This is a showcase, not a deployment.** It is a complete design with its measurement apparatus built, running on nothing. The workflows have no API key configured and have never fired; the reviewer has been executed once by hand, locally, against a real change.
+
+**So no precision figure exists.** `docs/evidence.md` has what that one run found, what it cost, and the four defects it exposed in the reviewer's own design — but nothing was posted to a pull request, so nobody has accepted or rejected a finding, so the metric this project is built around is undefined. Read that document first if you are here to find out whether this works: the rest of this file describes a design, not a result.
+
+That gap is the point rather than an omission. Anyone can assert that an automated reviewer is useful. What is hard, and what this repository is actually about, is fixing the definitions before the numbers exist, building the thing that computes them, and writing down in advance every way the number could flatter itself — `docs/metric.md` threats 4, 5 and 6, all three of which are unsolved and stated as such.
 
 ## The claim
 
