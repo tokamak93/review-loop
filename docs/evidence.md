@@ -1,31 +1,84 @@
 # Evidence
 
-**Nothing has been measured yet.** No run of this reviewer has happened against any pull request, real or otherwise. Every number in this file is absent rather than pending.
+**No precision figure exists.** One review has been run. Nobody has acted on its findings, so no outcome has been observed, so the metric this repository is built around is still undefined.
 
-This file exists in this state on purpose. It is the deliverable of SPEC §6, it is where the project's central claim either survives or does not, and leaving it uncreated until there was something flattering to put in it is how a repository ends up with a README full of assertions and no page to check them against.
+What follows is a worked example: what the pipeline produced on one real change, what it cost, and what it revealed about itself. It is not evidence that the reviewer is any good. Keeping those two things apart is the whole discipline of this document.
 
-## What will go here
+## The run
 
 | | |
 |---|---|
-| **The repository** | Named, linked. Not a synthetic corpus. |
-| **The pull requests** | Linked, individually. |
-| **Baseline precision** | Loop off, over at least 80 non-void findings across at least 20 pull requests |
-| **Precision with the loop on** | Same floors, same command, stated range |
-| **The holdout comparison** | `learning=on` against `learning=off`, and whether the metrics command called it comparable |
-| **Accepted findings** | Examples, quoted |
-| **Rejected findings** | Examples, quoted, in the same number and the same detail |
+| Date | 2026-08-21 |
+| Target | `a-private-go-repo` commit `487d608` — the initial commit of a Go purchase-cart service |
+| Size | 3,233 insertions across 35 files; ~2,379 reviewable after excluding generated Swagger and `go.sum` |
+| Effort | `medium`, gate `high`, learning off (no rules file exists) |
+| Cost | 397,932 tokens across 8 agents, ≈$1.70 — `docs/cost.md` |
 
-Every figure comes from `go run ./cmd/metrics`, with the range it was computed over printed beside it. No figure is typed in by hand, including the ones that look obvious.
+**How it was run, precisely.** Not in CI. The pipeline was executed manually in a local Claude Code session: each agent spawned as a general-purpose subagent that read its own definition file from `.claude/agents/` and followed it, with the model pinned to match its frontmatter. Same instructions, same models, same order, same confidence rubric.
 
-## What this file must say if the claim fails
+It differs from a real run in three ways that matter:
 
-If precision does not improve, that is the result, and it is reported here in the same detail a success would get — same sections, same examples, same range.
+- **Nothing was posted.** No comments exist on any pull request. The posting step, the marker, and the harvester were not exercised at all.
+- **There was no conversation to read.** Pass 1 had nothing to suppress against, so the pipeline ran at full width. A real second or third review is much cheaper and the cost figure does not reflect that.
+- **The orchestrator was a human-directed session**, not the skill running unattended. Where the skill was ambiguous, a person resolved it — and each time that happened is recorded below as a defect, because in CI nobody would have been there.
 
-If the holdout has not cleared the floors, the improvement is reported as **unverified**, in that word, and the README carries the same qualifier. `docs/failure-modes.md` explains why: a learned rule that suppresses a category raises precision whether or not the rule was any good, and without the holdout there is no way to tell those apart.
+## What it produced
 
-If the reviewer turns out to be worse than posting nothing, that goes here too.
+Six specialists returned 11 findings. The verifier confirmed all 11. The gate dropped none. The cap posted 6.
 
-## Status
+**Would have been posted:**
 
-Nothing run. `.review/outcomes.jsonl` is empty. The first thing to do is measure the baseline before any learned rule exists — SPEC's suggested order, step 4 — because once a rule is in the file there is no way back to an unmodified reviewer over the same pull requests.
+| | Finding | Severity |
+|---|---|---|
+| 1 | VAT rounded half-up per unit then multiplied by quantity, so the rounding residual scales with quantity | high |
+| 2 | Goroutine fan-out driven by an unbounded client-supplied array; ADR 0008 claims batch sizing mitigates this, and it does not | high |
+| 3 | `Quantity` accepted with no upper bound and multiplied into persisted totals — `int64` overflow reachable from one request | medium |
+| 4 | Already-cancelled context makes `fetchProductsInParallel` return `(nil, nil)`, reported to the client as "product not found" | medium |
+| 5 | No timeout anywhere on the request path, against ADR 0008's claim that timeouts propagate | medium |
+| 6 | `Product.VATRate` is dead but reachable from the operator-facing catalog file via tagless JSON matching | medium |
+
+**Dropped at the cap (5):** three test-quality findings, an error-leak, and the missing commit description.
+
+**Returned nothing:** `pr-reuse`, correctly — its primary finding is "you reimplemented something this repository already has", and the repository did not exist before this commit.
+
+## What this does not show
+
+**That any of those six findings is correct.** They were confirmed by `pr-verify`, which is part of the system under evaluation, not an independent judge of it. Only the repository's author can say whether the VAT rounding is a real defect or an intended simplification. Until someone does, these are six claims.
+
+**Anything about precision.** Precision is `accepted / (accepted + rejected + ignored)`, and all three require a human to have seen a comment. Zero comments were posted. `.review/outcomes.jsonl` is empty and `go run ./cmd/metrics` on it returns "no records in range" — correctly.
+
+**Anything about the loop.** No rule has been learned, no holdout slice exists, and the second half of this repository — harvest, outcomes, learned rules — has never run.
+
+## What the run revealed about the reviewer
+
+The most useful output was not the findings. It was three defects in the design, each found by hitting it:
+
+1. **`category` was not a closed type.** `pr-tests` returned `cannot-fail` for two findings that were plainly `test-gap`. As a bare string it passed validation, and would have reached `outcomes.jsonl` and split the `test-gap` bucket in two — halving both counts in exactly the figure a learned rule is proposed from. Now a closed Go type beside `State`.
+2. **Finding ids leaked their author to the verifier.** Handing `pr-patterns-3` to a pass whose entire value is not knowing which agent produced what. Fixed by relabelling to `F1…Fn` before Pass 4.
+3. **Ranking had no tie-break below severity.** Eight findings tied at `medium` with six slots, and the skill said nothing about which survive. Now breaks on category spread — under which this run would have kept a test finding rather than dropping all three.
+
+All three were invisible to inspection and obvious on contact. That is the argument for running a thing before writing its README, and this repository failed to make it in the right order.
+
+## The confirmation rate is a yellow flag
+
+**11 of 11 CONFIRMED, zero REJECTED.**
+
+ADR 0005 records that a high rejection rate is information. A zero rejection rate is information too, and from one run the benign reading (the specialists were right) is indistinguishable from the worrying one (the verifier rubber-stamps).
+
+Two observations argue against pure rubber-stamping. It **narrowed** finding 1's claim, rejecting "systematically over-collecting" on the grounds that round-half-up can err in either direction depending on the fractional remainder — keeping the defect, fixing the overreach. And it **verified empirically**, writing a throwaway Go program to confirm that `encoding/json` populates a tagless `VATRate` field case-insensitively, rather than asserting it from memory.
+
+It also **raised three findings from medium to high confidence**, which is permitted — the verifier's number replaces the specialist's, only severity is one-way — but means three of the six posted findings reached the author on the verifier's judgement rather than the specialist's. If the verifier is generous, the gate is not doing what `docs/adr/0007` claims.
+
+This is exactly the number that needs many runs and cannot be settled by one. It is recorded here so that a later low rejection rate is not mistaken for a new problem, or a good one.
+
+## What would make this document real
+
+In order, and none of it is done:
+
+1. Post the findings on an actual pull request, so outcomes become observable
+2. Have a human accept or reject each one, on the record
+3. Repeat until 80 non-void findings across 20 pull requests — the floors in `docs/metric.md`
+4. Report precision from `go run ./cmd/metrics`, with the range beside it
+5. Only then introduce a learned rule, and only then compare against the holdout
+
+Step 1 has not happened, and on a private showcase repository with no API key configured in CI, it is not scheduled. That is a deliberate choice about this repository's purpose, not an oversight — but it means everything above stays a worked example, and this document must not start describing it as anything else.

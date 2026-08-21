@@ -2,7 +2,7 @@
 
 A pull request reviewer that measures its own precision, and learns from what humans actually did with its comments.
 
-**Nothing here has been measured yet.** No run has happened against a real pull request. `docs/evidence.md` is empty on purpose and will stay that way until there is something to put in it. Read that first if you are here to find out whether this works — the rest of this file describes a design, not a result.
+**No precision figure exists.** The pipeline has been run once, on a real 3,233-line change — `docs/evidence.md` has what it found, what it cost, and the three defects it exposed in its own design. But nothing was posted to a pull request, so nobody has accepted or rejected a finding, so the metric this project is built around is still undefined. Read that document first if you are here to find out whether this works: the rest of this file describes a design, not a result.
 
 ## The claim
 
@@ -24,7 +24,7 @@ So a service holds a stub of about a dozen lines and nothing else. Everything th
 - **What is learned stays local.** The reviewer is central; `.review/learned-rules.md` and the outcome history are not. A rule learned from one team's rejections is evidence about that team's conventions, and pooling rules across a fleet produces a file that is either too bland to be a lesson or wrong in most places it lands. The cost is that a genuinely general lesson has to be promoted by hand into the reviewer itself.
 - **One tag move can break everything simultaneously.** That is the price of the first bullet, and `docs/failure-modes.md` says what it costs and how to get out of it.
 
-**This repository is a single instance of that design, not a deployment of it.** It reviews its own pull requests, through the same reusable workflows and the same stub a service would copy — which is the only honest way to show the shape works. Nothing has been run across an actual fleet, and `docs/evidence.md` is empty. The reasoning, including the alternatives rejected, is in `docs/adr/0008-distribution.md`.
+**This repository is a single instance of that design, not a deployment of it.** It reviews its own pull requests, through the same reusable workflows and the same stub a service would copy — which is the only honest way to show the shape works. Nothing has been run across an actual fleet, and no cross-repository path has been exercised at all. The reasoning, including the alternatives rejected, is in `docs/adr/0008-distribution.md`.
 
 ## The loop
 
@@ -138,5 +138,5 @@ Three of these are the same mistake applied to three different fields, and all t
 | `docs/metric.md` | The definitions, fixed before anything was measured |
 | `docs/cost.md` | What a review costs, measured once, with the error bars stated |
 | `docs/failure-modes.md` | What goes wrong, including what has no answer |
-| `docs/evidence.md` | Empty |
+| `docs/evidence.md` | One worked example. No precision figure, and it says why. |
 | `docs/adr/` | Why it is shaped this way, including the parts that were wrong |
