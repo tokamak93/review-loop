@@ -14,13 +14,23 @@ Separately, different repositories want different things from this reviewer. A t
 
 **Verification is its own pass**, run by `pr-verify` on a fresh context, after merge and deduplication and before aggregation. It receives the findings alone — not the brief, not the specialists' reasoning, not which agent produced what — and returns CONFIRMED, PLAUSIBLE or REJECTED per finding. It may lower severity and confidence and sharpen a claim; it may not raise severity and may not add findings.
 
-**Effort is a single input**, `REVIEW_EFFORT`, defaulting to `medium`:
+**Effort is a single input**, `REVIEW_EFFORT`, defaulting to `medium`. It sells **coverage, never rigour**: triage, verification and the confidence gate run at every tier.
 
-| | Specialists | Cap | Posts |
-|---|---|---|---|
-| `low` | pr-defects, pr-shape | 4 | CONFIRMED only |
-| `medium` | all applicable | 6 | CONFIRMED only |
-| `high` | all applicable | 8 | CONFIRMED and PLAUSIBLE |
+| | Specialists | Verified | Cap | Posts |
+|---|---|---|---|---|
+| `low` | pr-defects-lite, pr-patterns-lite | top 6 | 4 | CONFIRMED only |
+| `medium` | pr-defects, pr-patterns, pr-tests, pr-security, pr-shape | top 8 | 6 | CONFIRMED only |
+| `high` | + pr-reuse | all | 8 | CONFIRMED and PLAUSIBLE |
+
+*(Amended after the first real run. The original `low` was pr-defects plus pr-shape, which was wrong: pr-shape counts lines and reads the description, and a tier whose most reliable output is "your description is empty" is not a cheap review, it is a bot a team uninstalls. The floor has to be the smallest set that is still a code review — one agent hunting bugs, one judging whether the design will hurt later.)*
+
+Two mechanisms make `low` cheap without making it untrustworthy:
+
+**Specialists run one model tier down**, via `-lite` agent files that pin a cheaper model and delegate to the full-price agent's instructions, so there is one copy of every rule. **The verifier is never downgraded.** A weaker specialist finds less — a coverage reduction, which effort is allowed to sell. A weaker verifier checks worse — a rigour reduction, which it is not.
+
+**Verification is scoped, not skipped.** Findings are ranked by severity before Pass 4 and only as many as the tier could post are verified. Verifying findings the cap was always going to drop is waste that costs nothing to remove; skipping verification entirely would return the gate to the specialists' self-assessment, which is the thing this ADR exists to refuse.
+
+The property that falls out: **cheapness costs recall, not precision.** A `low` review says less. It does not say worse.
 
 Both are recorded in the comment marker, so `docs/metric.md` can segment precision by verdict and by effort.
 

@@ -23,13 +23,33 @@ Read all three. Default any that is unset or unrecognised.
 
 ### Effort
 
-Effort is the precision-against-coverage dial.
+Effort buys **coverage, not rigour**. Triage, verification and the confidence gate run at every tier. What a cheaper tier gives up is how much of the change gets looked at — never whether what is posted was checked.
 
-| | Specialists | Cap | Posts |
-|---|---|---|---|
-| `low` | pr-defects, pr-shape | 4 | CONFIRMED only |
-| `medium` | all applicable | 6 | CONFIRMED only |
-| `high` | all applicable | 8 | CONFIRMED, and PLAUSIBLE marked as such |
+That distinction is the whole design. A tier that skipped verification would post findings gated on a specialist's opinion of its own work, which is what ADR 0005 and ADR 0007 both exist to refuse. It would be cheaper and it would not be a review.
+
+| | Specialists | Verified | Cap | Posts |
+|---|---|---|---|---|
+| `low` | pr-defects-**lite**, pr-patterns-**lite** | top 6 by severity | 4 | CONFIRMED only |
+| `medium` | pr-defects, pr-patterns, pr-tests, pr-security, pr-shape | top 8 by severity | 6 | CONFIRMED only |
+| `high` | + pr-reuse | all | 8 | CONFIRMED, and PLAUSIBLE marked as such |
+
+`low` is the floor because it is the smallest set that is still a code review: one agent looking for bugs, one judging whether the design will hurt later. Drop either and what is left reports on the shape of the diff rather than on the code in it — a reviewer whose most reliable output is that the description is empty gets uninstalled, and deserves to be.
+
+Verification is scoped rather than skipped. Rank findings by severity before Pass 4 and verify only as many as the tier could post, plus a small margin; verifying findings the cap was always going to drop is the one piece of waste in this pipeline that costs nothing to remove.
+
+At `low` and `medium` a PLAUSIBLE finding is dropped, not softened into a hedge. "This might be a problem, I could not check" is a comment that spends attention and returns nothing.
+
+At `high`, a PLAUSIBLE finding opens with what could not be verified, in its first clause, so the author knows what they are being asked to check.
+
+### Models at `low`
+
+`low` runs each specialist one model tier down — `pr-patterns-lite` on Sonnet instead of Opus, `pr-defects-lite` on Haiku instead of Sonnet. An agent's model is pinned in its own frontmatter and the orchestrator cannot override it at call time, so the cheap variants are separate files. They contain no instructions of their own: each reads the full-price agent's file and follows it, so there is exactly one copy of every rule and nothing to drift.
+
+**The verifier is never downgraded, at any tier.** A cheaper specialist finds less, which is a coverage reduction and therefore allowed. A cheaper verifier checks worse, which is a rigour reduction and is the one thing effort does not sell. Everything a `low` run posts has been through the same Sonnet verifier and the same gate as everything a `high` run posts.
+
+That is the property worth understanding before turning the dial down: **cheapness costs recall, not precision.** A `low` review says less. It does not say worse.
+
+Triage stays on Haiku throughout — there is no tier below it, and it is 2% of the cost of a review.
 
 At `low` and `medium` a PLAUSIBLE finding is dropped, not softened into a hedge. "This might be a problem, I could not check" is a comment that spends attention and returns nothing.
 
