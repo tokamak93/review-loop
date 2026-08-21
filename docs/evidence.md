@@ -9,7 +9,7 @@ What follows is a worked example: what the pipeline produced on one real change,
 | | |
 |---|---|
 | Date | 2026-08-21 |
-| Target | `a-private-go-repo` commit `487d608` — the initial commit of a Go purchase-cart service |
+| Target | A private Go repository — the initial commit of a purchase-cart service: hexagonal layering, nine ADRs, three test files |
 | Size | 3,233 insertions across 35 files; ~2,379 reviewable after excluding generated Swagger and `go.sum` |
 | Effort | `medium`, gate `high`, learning off (no rules file exists) |
 | Cost | 397,932 tokens across 8 agents, ≈$1.70 — `docs/cost.md` |
