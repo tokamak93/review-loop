@@ -136,6 +136,7 @@ Three of these are the same mistake applied to three different fields, and all t
 | `templates/` | What a consuming service copies |
 | `cmd/metrics` `internal/` | The metric, in Go. Reads committed data, calls nothing. |
 | `docs/metric.md` | The definitions, fixed before anything was measured |
+| `docs/cost.md` | What a review costs, measured once, with the error bars stated |
 | `docs/failure-modes.md` | What goes wrong, including what has no answer |
 | `docs/evidence.md` | Empty |
 | `docs/adr/` | Why it is shaped this way, including the parts that were wrong |

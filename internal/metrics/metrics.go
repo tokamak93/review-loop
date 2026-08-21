@@ -233,7 +233,7 @@ func sortSegments(name string, segments []Segment) {
 func dimensionValue(r outcome.Record, name string) string {
 	switch name {
 	case ByCategory:
-		return r.Category
+		return string(r.Category)
 	case BySeverity:
 		return r.Severity
 	case ByConfidence:

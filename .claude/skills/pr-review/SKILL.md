@@ -127,7 +127,11 @@ Each specialist returns findings in the contract below and posts nothing.
 
 Merge and deduplicate first: two specialists will find the same defect from different angles, and verifying it twice is waste. Keep the version with the better failure scenario, not the higher severity. Keep both finding IDs on the survivor — the marker records the agent that produced the version you kept.
 
-Then hand every surviving finding to the **pr-verify** agent, in one batch, on a fresh context. Give it the findings and nothing else — not the brief, not the specialists' reasoning, not which agent produced what, not the points-already-made list. Its independence is the entire value: an agent that has seen how a finding was reasoned into existence will re-run that reasoning and agree with it.
+Then rank what survived by severity and take as many as this effort level verifies — the table above. Verifying findings the cap was always going to drop is the one piece of pure waste in this pipeline.
+
+**Relabel before you hand them over.** Specialists return ids like `pr-patterns-3`, which name their author. Rewrite them to `F1`, `F2`, `F3`… in the order you send them, and keep the mapping yourself. Without this, "not which agent produced what" is violated by the id field itself, and the verifier learns that a finding came from the Opus agent — which is exactly the thing ADR 0005 says tells it how to feel about a finding.
+
+Hand the relabelled findings to the **pr-verify** agent, in one batch, on a fresh context. Give it the findings and nothing else — not the brief, not the specialists' reasoning, not which agent produced what, not the points-already-made list. Its independence is the entire value: an agent that has seen how a finding was reasoned into existence will re-run that reasoning and agree with it.
 
 It returns, per finding ID, a verdict and a confidence it set itself.
 
@@ -155,7 +159,11 @@ This pass is yours, and it is where precision is won or lost.
 
 4. **Rank.** Order by verdict first — CONFIRMED before PLAUSIBLE — then severity. Confidence is no longer a ranking input at this point: everything left has cleared the same gate.
 
-5. **Cap** at the effort level's limit. If you dropped findings at the cap, say how many in your output.
+   Severity ties, and it ties often — most real findings are `medium`. Break a tie by **category spread**: walk the tied findings taking one per category before taking a second from any category. Six comments across six concerns tell an author more than six comments about their tests, and a review that stacks one category reads as a hobby-horse even when every finding is right.
+
+   Break a remaining tie by the specificity of the verifier's `confidence-reason` — a finding whose check names files and callers beats one whose check is a sentence. If they are still tied, take them in the order the verifier returned them and say so; an arbitrary rule stated out loud is better than an arbitrary rule applied silently.
+
+5. **Cap** at the effort level's limit. If you dropped findings at the cap, say how many in your output, **and how many of each category** — a cap that repeatedly eats one category is telling you the ranking is wrong, and it is the only place that would show.
 
 6. **Post**, and leave everything that is already there alone.
 
@@ -205,7 +213,7 @@ evidence: <what you read to be sure — file:line, or the document and the line 
 
 `kind: pr-level` findings — size, mixed concerns, scope mismatch, missing description — have no line to anchor to; omit `file` and `line`.
 
-Categories:
+Categories — **this list is closed**:
 
 | | |
 |---|---|
@@ -216,7 +224,11 @@ Categories:
 | `security` | pr-security |
 | `pr-shape` `scope-mismatch` | pr-shape |
 
-Pick the category that describes the *defect*, not the file it sits in, and not the agent that found it — the agent is recorded separately. The harvest step segments precision by category and proposes rules per category, so a category shared between two unrelated kinds of finding lets one suppression rule silence both.
+Pick the category that describes the *defect*, not the file it sits in, and not the agent that found it — the agent is recorded separately.
+
+**Never invent one.** If nothing fits, the closest category plus a precise claim is right; a new value is not. The harvest step segments precision by category and proposes rules per category, so an invented value silently splits one bucket in two and halves both counts in exactly the figure a rule would be proposed from. This is enforced, not merely requested: `Category` is a closed type in `internal/outcome/outcome.go` and the harvester's reader rejects the whole file on an unrecognised value. A specialist that invents a category breaks the metric, loudly.
+
+*(This happened on the first real run — `pr-tests` returned `cannot-fail` for two findings that were plainly `test-gap`. Hence the closed type.)*
 
 Severity is how much damage the finding does. Confidence is how much of the claim you verified — `CONFIDENCE.md`, applied by everyone. Different axes, both measured against outcomes later. Inflating either makes the loop worse at improving you.
 

@@ -53,7 +53,7 @@ func TestLoadRejectsUnknownFields(t *testing.T) {
 
 func TestValidateRejectsIncompleteRecords(t *testing.T) {
 	tests := map[string]struct{ find, replace, want string }{
-		"empty category":  {`"category":"correctness"`, `"category":""`, "category is empty"},
+		"empty category":  {`"category":"correctness"`, `"category":""`, "not one of the defined categories"},
 		"missing gate":    {`"confidence_gate":"high"`, `"confidence_gate":""`, "confidence_gate is empty"},
 		"bad learning":    {`"learning":"on"`, `"learning":"maybe"`, "learning is"},
 		"bad outcome":     {`"outcome":"accepted"`, `"outcome":"pending"`, "outcome is"},
@@ -74,6 +74,32 @@ func TestValidateRejectsIncompleteRecords(t *testing.T) {
 				t.Errorf("error = %q, want it to contain %q", err, tc.want)
 			}
 		})
+	}
+}
+
+// Observed in the first real run: pr-tests invented `cannot-fail` for two
+// findings. With Category as a bare string this passed validation and would
+// have split the test-gap bucket in two, halving both counts in exactly the
+// figure a learned rule is proposed from.
+func TestLoadRejectsAnInventedCategory(t *testing.T) {
+	line := strings.Replace(valid, `"category":"correctness"`, `"category":"cannot-fail"`, 1)
+	_, err := outcome.Load(strings.NewReader(line))
+	if err == nil {
+		t.Fatal("Load accepted an invented category")
+	}
+	if !strings.Contains(err.Error(), "cannot-fail") {
+		t.Errorf("error = %q, want it to name the offending value", err)
+	}
+}
+
+func TestEveryCategoryInTheClosedListValidates(t *testing.T) {
+	if got := len(outcome.Categories()); got != 14 {
+		t.Errorf("Categories() has %d entries, want 14 — the skill's contract and this list have drifted", got)
+	}
+	for _, c := range outcome.Categories() {
+		if !c.Valid() {
+			t.Errorf("Categories() returned %q but Valid() rejects it", c)
+		}
 	}
 }
 

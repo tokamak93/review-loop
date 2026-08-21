@@ -40,6 +40,62 @@ func (s State) Valid() bool {
 	}
 }
 
+// Category is the kind of defect a finding describes, from the closed list in
+// the pr-review skill's finding contract.
+//
+// It is a closed type for the same reason State is. Precision is segmented by
+// category and learned rules are proposed per category, so an invented value
+// does not merely look untidy — it silently splits one bucket in two and
+// halves both counts in exactly the figure a rule would be proposed from. A
+// specialist that invents a category is a bug, and Load says so.
+type Category string
+
+// Every category a finding may carry, grouped by the agent that produces it.
+const (
+	Correctness   Category = "correctness"
+	Concurrency   Category = "concurrency"
+	ErrorHandling Category = "error-handling"
+	ResourceLeak  Category = "resource-leak"
+
+	Antipattern   Category = "antipattern"
+	APIContract   Category = "api-contract"
+	DataChange    Category = "data-change"
+	Observability Category = "observability"
+
+	Duplication Category = "duplication"
+	Efficiency  Category = "efficiency"
+
+	TestGap  Category = "test-gap"
+	Security Category = "security"
+
+	PRShape       Category = "pr-shape"
+	ScopeMismatch Category = "scope-mismatch"
+)
+
+var categories = map[Category]struct{}{
+	Correctness: {}, Concurrency: {}, ErrorHandling: {}, ResourceLeak: {},
+	Antipattern: {}, APIContract: {}, DataChange: {}, Observability: {},
+	Duplication: {}, Efficiency: {},
+	TestGap: {}, Security: {},
+	PRShape: {}, ScopeMismatch: {},
+}
+
+// Valid reports whether c is one of the defined categories.
+func (c Category) Valid() bool {
+	_, ok := categories[c]
+	return ok
+}
+
+// Categories returns every defined category, for callers that need to present
+// the closed list rather than restate it.
+func Categories() []Category {
+	out := make([]Category, 0, len(categories))
+	for c := range categories {
+		out = append(out, c)
+	}
+	return out
+}
+
 // Record is one posted finding and what became of it.
 //
 // The fields above Outcome are copied from the finding's comment marker and
@@ -60,12 +116,12 @@ type Record struct {
 	Line int    `json:"line,omitempty"`
 
 	// Claimed at post time, from the marker.
-	Category   string `json:"category"`
-	Severity   string `json:"severity"`
-	Confidence string `json:"confidence"`
-	Agent      string `json:"agent"`
-	Verdict    string `json:"verdict"`
-	Effort     string `json:"effort"`
+	Category   Category `json:"category"`
+	Severity   string   `json:"severity"`
+	Confidence string   `json:"confidence"`
+	Agent      string   `json:"agent"`
+	Verdict    string   `json:"verdict"`
+	Effort     string   `json:"effort"`
 
 	// Gate is the minimum confidence that was required to post at the time.
 	// It is recorded because it decides what is absent from the history: with
@@ -126,8 +182,10 @@ func (r Record) Validate() error {
 	if err := r.validateIdentity(); err != nil {
 		return err
 	}
+	if !r.Category.Valid() {
+		return fmt.Errorf("category is %q, which is not one of the defined categories", r.Category)
+	}
 	for _, f := range []struct{ name, value string }{
-		{"category", r.Category},
 		{"severity", r.Severity},
 		{"confidence", r.Confidence},
 		{"agent", r.Agent},

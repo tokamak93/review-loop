@@ -10,7 +10,7 @@ import (
 type spec struct {
 	pr         int
 	state      outcome.State
-	category   string
+	category   outcome.Category
 	confidence string
 	learning   string
 }
