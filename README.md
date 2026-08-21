@@ -12,6 +12,20 @@ A reviewer that posts fifteen findings of which four matter trains the team to s
 
 The claim is falsifiable, and `docs/metric.md` fixes the definitions before any number is produced.
 
+## What it is built for
+
+A fleet. Two hundred microservices in different languages, owned by different teams, each with its own CI.
+
+That constraint is the reason the repository is shaped the way it is, and it is not hypothetical — it is the shape that survives contact with a real organisation. A reviewer distributed by copying its instructions into every service is frozen on the day it ships: improving it becomes a two-hundred-pull-request migration, so it never improves, so the loop this whole project is about never turns. The reviewer has to live in one place and be *called* from everywhere else.
+
+So a service holds a stub of about a dozen lines and nothing else. Everything that decides behaviour — the passes, the models, the agents, the confidence gate, the tool allowlist — lives here and changes here, and moving a tag ships the change to the whole fleet at once. Three things follow from that, each with its own cost:
+
+- **The gate is a separate workflow from the review.** Two hundred services do not share one build. A Go service calls `go-checks.yml`; a service in another language substitutes its own job and calls `review.yml` unchanged, because the review does not care what the gate was, only that one passed.
+- **What is learned stays local.** The reviewer is central; `.review/learned-rules.md` and the outcome history are not. A rule learned from one team's rejections is evidence about that team's conventions, and pooling rules across a fleet produces a file that is either too bland to be a lesson or wrong in most places it lands. The cost is that a genuinely general lesson has to be promoted by hand into the reviewer itself.
+- **One tag move can break everything simultaneously.** That is the price of the first bullet, and `docs/failure-modes.md` says what it costs and how to get out of it.
+
+**This repository is a single instance of that design, not a deployment of it.** It reviews its own pull requests, through the same reusable workflows and the same stub a service would copy — which is the only honest way to show the shape works. Nothing has been run across an actual fleet, and `docs/evidence.md` is empty. The reasoning, including the alternatives rejected, is in `docs/adr/0008-distribution.md`.
+
 ## The loop
 
 ```

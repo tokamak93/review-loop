@@ -42,6 +42,11 @@ It costs the obvious thing: a genuinely general lesson has to be learned two hun
 
 **A private fleet needs a token that can read this repository.** `plugin_marketplaces` and the `actions/checkout` of the metrics command both fetch from review-loop. Public repository, no problem; a private mirror needs a PAT, and that is a real adoption cost not yet solved here.
 
+**This repository is currently a single private instance**, reviewing only itself. Two consequences worth stating rather than discovering:
+
+- Self-review does not need the plugin at all. The skills are in `.claude/` in the checked-out repository and Claude Code discovers them there, so `plugin_marketplaces` is redundant on this path and — pointing at a private repository — is a clone that may fail authentication. It is kept in the reusable workflow because that is the fleet path and the workflow is the fleet's; the manifest is the artefact showing how distribution works, and neither has been exercised across two repositories.
+- The cross-repository mechanisms above are therefore **designed and unverified**. `github.job_workflow_sha`, the `#ref` marketplace syntax, and reusable-workflow access from a private repository are all read from documentation rather than run. Anything this ADR claims about them is a claim.
+
 **The reusable workflow cannot see the caller's `concurrency` needs.** Both are set centrally: `cancel-in-progress: true` on the gate, where superseded work is pure waste, and `false` on the review, where a cancelled run can leave half its comments posted.
 
 ## Alternatives rejected
