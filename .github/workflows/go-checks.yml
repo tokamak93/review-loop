@@ -1,0 +1,74 @@
+name: Go checks
+
+# Reusable. The static gate for Go services: everything decidable by a tool is
+# decided here, for free, before a single token is spent. A caller runs this as
+# the job the review job `needs:`.
+#
+# A service in another language swaps this job for its own and keeps calling
+# review.yml unchanged — the review does not care what the gate was, only that
+# one passed. That is why the two are separate workflows.
+on:
+  workflow_call:
+    inputs:
+      go_version_file:
+        type: string
+        default: go.mod
+      lint_config:
+        description: >
+          Path to a golangci-lint config in the calling repository. Leave empty
+          to use the strict baseline shipped with review-loop, which is the
+          point of centralising this: two hundred services get one config, and
+          tightening it is one commit here.
+        type: string
+        default: ""
+      reviewer_ref:
+        description: "Tag or branch of review-loop to take the lint baseline from."
+        type: string
+        default: v1
+      test_args:
+        type: string
+        default: "-race ./..."
+
+permissions:
+  contents: read
+
+concurrency:
+  # Superseded work here is pure waste — unlike the review, nothing has been
+  # published halfway.
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ inputs.go_version_file }}
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Fetch the lint baseline
+        if: inputs.lint_config == ''
+        uses: actions/checkout@v4
+        with:
+          repository: tokamak93/review-loop
+          ref: ${{ inputs.reviewer_ref }}
+          path: .review-loop
+          sparse-checkout: templates
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --config ${{ inputs.lint_config || '.review-loop/templates/.golangci.yml' }}
+
+      - name: Test
+        run: go test ${{ inputs.test_args }}

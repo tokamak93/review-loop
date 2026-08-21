@@ -1,0 +1,5 @@
+# Built by the harvest workflow, never committed.
+/review-metrics
+
+# The second checkout the harvest workflow makes into a consuming repository.
+/.review-loop/

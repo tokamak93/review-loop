@@ -1,0 +1,18 @@
+# review-loop harvesting its own outcomes. Same stub a consumer copies.
+name: Harvest review outcomes
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  harvest:
+    uses: ./.github/workflows/harvest.yml
+    secrets: inherit
+    with:
+      reviewer_ref: main

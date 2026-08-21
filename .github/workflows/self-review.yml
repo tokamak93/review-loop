@@ -1,0 +1,30 @@
+# review-loop reviewing its own pull requests, through exactly the stub a
+# consumer copies. If the reviewer is not worth running on the repository that
+# builds it, it is not worth shipping.
+#
+# The ref is `main` rather than a pinned tag on purpose: this repository should
+# feel a bad change to the reviewer immediately, before a tag moves and two
+# hundred services feel it instead.
+name: PR review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  checks:
+    uses: ./.github/workflows/go-checks.yml
+    with:
+      lint_config: .golangci.yml
+
+  review:
+    needs: checks
+    if: ${{ !github.event.pull_request.draft }}
+    uses: ./.github/workflows/review.yml
+    secrets: inherit
+    with:
+      reviewer_ref: main

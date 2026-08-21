@@ -1,0 +1,27 @@
+# Copy to .github/workflows/harvest.yml in the service being reviewed.
+#
+# Optional. Install it on the services you actually want the reviewer to learn
+# from — the ones with enough pull request traffic to clear the sample floors
+# in docs/metric.md. On a repository with four pull requests a month it will
+# correctly propose nothing, week after week, and cost you a run to say so.
+#
+# Outcomes and learned rules stay in this repository. They are evidence about
+# this team's conventions, and a rule learned here is not evidence about
+# another service. See docs/adr/0008-distribution.md.
+name: Harvest review outcomes
+
+on:
+  schedule:
+    # Weekly. Outcomes need time to settle — a pull request closed yesterday
+    # has not finished telling you whether its comments were useful.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  harvest:
+    uses: tokamak93/review-loop/.github/workflows/harvest.yml@v1
+    secrets: inherit

@@ -1,0 +1,106 @@
+# Strict lint baseline, copied verbatim from fitness-func/.golangci.yml.
+#
+# It lives here because this repository is built on the claim that Claude
+# should never spend a token on something a tool can decide. That claim is
+# only true if the tools are actually strict, so the baseline ships with the
+# workflow rather than being left to the consuming repository to invent.
+#
+# Kept byte-identical to fitness-func so the two do not drift. If it changes
+# there, copy it again rather than editing this file.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - govet
+    - staticcheck # includes the former gosimple/stylecheck checks in v2
+    - unused
+    - errcheck
+    - ineffassign
+    # Complexity and nesting: keep functions small and flat
+    - funlen
+    - gocyclo
+    - nestif
+    # Naming, control-flow style, and other go-standard-library-idiom
+    # conventions, including guard-clause / early-return style
+    - revive
+    - gocritic
+    # Misc best practices
+    - goconst
+    - misspell
+    - unconvert
+    - unparam
+    - whitespace
+  settings:
+    funlen:
+      lines: 60
+      statements: 40
+    gocyclo:
+      min-complexity: 12
+    nestif:
+      # Flags if-statements nested 3+ deep; prefer guard clauses / early
+      # returns instead (see revive's early-return and indent-error-flow
+      # rules below, which enforce the same thing at the statement level).
+      min-complexity: 4
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+      # Table-driven tests legitimately repeat a value's literal (once as
+      # the subtest name, once as the expected value) — count only
+      # production code toward the duplication threshold.
+      ignore-tests: true
+    misspell:
+      locale: US
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+    revive:
+      severity: warning
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        # Guard-clause / low-nesting enforcement:
+        - name: indent-error-flow
+        - name: superfluous-else
+        - name: early-return
+        - name: errorf
+        - name: empty-block
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+        - name: unused-receiver
+  exclusions:
+    generated: lax
+    # Table-driven test functions are long by data volume (the table
+    # literal), not by control-flow complexity; the underlying logic they
+    # exercise is still covered by these limits everywhere else.
+    rules:
+      - path: _test\.go
+        linters:
+          - funlen
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

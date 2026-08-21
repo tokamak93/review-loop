@@ -1,0 +1,85 @@
+name: Harvest review outcomes
+
+# Reusable, and it runs against the *calling* repository. Outcomes are local to
+# the repository they were observed on, because a rule learned from one team's
+# conventions is not evidence about another team's. See
+# docs/adr/0008-distribution.md.
+on:
+  workflow_call:
+    inputs:
+      reviewer_ref:
+        type: string
+        default: v1
+      model:
+        type: string
+        default: claude-opus-5
+      max_turns:
+        type: number
+        default: 60
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+
+permissions:
+  # contents: write is for .review/outcomes.jsonl only — append-only evidence,
+  # committed straight to the default branch because it is data, not
+  # behaviour, and a rewrite of it is visible in git history. The learned rules
+  # are behaviour and reach the branch only through a pull request a human
+  # approves. docs/adr/0008-distribution.md.
+  contents: write
+  pull-requests: write
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the metrics command
+        uses: actions/checkout@v4
+        with:
+          repository: tokamak93/review-loop
+          ref: ${{ inputs.reviewer_ref }}
+          path: .review-loop
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: .review-loop/go.mod
+          cache: false
+
+      # Installed to a fixed path so the allowlist below can name it. The
+      # harvester is permitted to run this and is not permitted to compute
+      # precision any other way: an LLM adding up four hundred records gives a
+      # different answer each time, and docs/metric.md promises figures anyone
+      # can recompute.
+      - name: Install the metrics command
+        run: go build -o /usr/local/bin/review-metrics ./cmd/metrics
+        working-directory: .review-loop
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          plugin_marketplaces: https://github.com/tokamak93/review-loop.git#${{ inputs.reviewer_ref }}
+          plugins: review-loop@review-loop
+          display_report: true
+          prompt: |
+            Use the review-harvest skill against ${{ github.repository }}.
+
+            Harvest outcomes for pull requests closed since the watermark in
+            .review/outcomes.jsonl, append the new records, commit them to the
+            default branch, then run `review-metrics` and report its output in
+            your summary.
+
+            Only if the evidence floors in docs/metric.md are met, open a pull
+            request proposing changes to .review/learned-rules.md. If they are
+            not met, open nothing — a harvest run that proposes nothing is the
+            normal outcome.
+          claude_args: |
+            --model ${{ inputs.model }}
+            --max-turns ${{ inputs.max_turns }}
+            --allowedTools "Read,Grep,Glob,Edit,Write,Bash(review-metrics:*),Bash(gh api:*),Bash(gh pr:*),Bash(git:*)"
+            --disallowedTools "WebSearch,WebFetch"

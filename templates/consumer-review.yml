@@ -1,0 +1,39 @@
+# Copy to .github/workflows/review.yml in the service being reviewed.
+#
+# This is the whole installation. Everything that decides how the review
+# behaves — the passes, the models, the agents, the confidence gate — lives in
+# review-loop and changes there. Two hundred services hold this file and none
+# of them needs touching when the reviewer improves.
+#
+# Pin `@v1`. Moving the tag ships the new reviewer everywhere at once, which is
+# the point and also the risk; docs/failure-modes.md says what that costs.
+name: PR review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # The static gate. Nothing decidable by a tool is ever paid for in tokens,
+  # and the review skill may state that as fact because this job demonstrably
+  # ran. Replace it with your own build/lint/test job if this service is not
+  # Go — the review below does not care what the gate was, only that one
+  # passed.
+  checks:
+    uses: tokamak93/review-loop/.github/workflows/go-checks.yml@v1
+
+  review:
+    needs: checks
+    # Drafts are a working surface, not a request for review. They still get
+    # the gate above; they do not get comments.
+    if: ${{ !github.event.pull_request.draft }}
+    uses: tokamak93/review-loop/.github/workflows/review.yml@v1
+    secrets: inherit
+    # Defaults are effort: medium, min_confidence: high, holdout_every: 5.
+    # Raise effort only once the numbers say the reviewer has earned the room.
+    # with:
+    #   effort: medium
