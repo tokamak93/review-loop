@@ -16,7 +16,10 @@
         "./.claude/skills/pr-review",
         "./.claude/skills/review-harvest"
       ],
-      "agents": ["./.claude/agents"]
+      "agents": [
+        "./.claude/agents"
+      ],
+      "license": "MIT"
     }
   ]
 }
