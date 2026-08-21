@@ -35,6 +35,16 @@ on:
         description: "Tag or branch of review-loop to install the skills from."
         type: string
         default: v1
+      install_skills:
+        description: >
+          Fetch the skills and agents as a plugin from review-loop. True for a
+          service being reviewed, which has no .claude/ of its own. False when
+          review-loop reviews itself: the skills are already in the checkout
+          and Claude Code finds them there, so installing them would be a
+          redundant clone of a private repository that may fail auth. See
+          docs/adr/0008-distribution.md.
+        type: boolean
+        default: true
       model:
         description: "Model for the orchestrator. Specialists pin their own."
         type: string
@@ -89,8 +99,11 @@ jobs:
           # The skills and agents come from review-loop, not from the repository
           # under review. That is the whole point: fixing the reviewer is one
           # commit here, not a pull request against two hundred services.
-          plugin_marketplaces: https://github.com/tokamak93/review-loop.git#${{ inputs.reviewer_ref }}
-          plugins: review-loop@review-loop
+          #
+          # Empty when install_skills is false, which is a no-op — the action
+          # treats both inputs as optional and defaults them to "".
+          plugin_marketplaces: ${{ inputs.install_skills && format('https://github.com/tokamak93/review-loop.git#{0}', inputs.reviewer_ref) || '' }}
+          plugins: ${{ inputs.install_skills && 'review-loop@review-loop' || '' }}
           # Puts the skill's REVIEW SUMMARY in the job summary. It is the only
           # durable record of what was suppressed, gated or capped — none of
           # which is visible from the GitHub API afterwards.

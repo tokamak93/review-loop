@@ -16,3 +16,5 @@ jobs:
     secrets: inherit
     with:
       reviewer_ref: main
+      # Both the skills and cmd/metrics are already in this checkout.
+      install_skills: false

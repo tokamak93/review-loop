@@ -10,6 +10,13 @@ on:
       reviewer_ref:
         type: string
         default: v1
+      install_skills:
+        description: >
+          Fetch the skills as a plugin, and check out review-loop separately to
+          build the metrics command. False when review-loop harvests itself:
+          both are already in the checkout. See review.yml for the reasoning.
+        type: boolean
+        default: true
       model:
         type: string
         default: claude-opus-5
@@ -36,15 +43,25 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Fetch the metrics command
+        if: inputs.install_skills
         uses: actions/checkout@v4
         with:
           repository: tokamak93/review-loop
           ref: ${{ inputs.reviewer_ref }}
           path: .review-loop
 
+      - name: Locate the metrics command
+        id: metrics
+        run: |
+          if [ -d .review-loop ]; then
+            echo "dir=.review-loop" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-go@v5
         with:
-          go-version-file: .review-loop/go.mod
+          go-version-file: ${{ steps.metrics.outputs.dir }}/go.mod
           cache: false
 
       # Installed to a fixed path so the allowlist below can name it. The
@@ -54,7 +71,7 @@ jobs:
       # can recompute.
       - name: Install the metrics command
         run: go build -o /usr/local/bin/review-metrics ./cmd/metrics
-        working-directory: .review-loop
+        working-directory: ${{ steps.metrics.outputs.dir }}
 
       - uses: anthropics/claude-code-action@v1
         env:
@@ -63,8 +80,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          plugin_marketplaces: https://github.com/tokamak93/review-loop.git#${{ inputs.reviewer_ref }}
-          plugins: review-loop@review-loop
+          plugin_marketplaces: ${{ inputs.install_skills && format('https://github.com/tokamak93/review-loop.git#{0}', inputs.reviewer_ref) || '' }}
+          plugins: ${{ inputs.install_skills && 'review-loop@review-loop' || '' }}
           display_report: true
           prompt: |
             Use the review-harvest skill against ${{ github.repository }}.

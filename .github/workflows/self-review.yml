@@ -28,3 +28,7 @@ jobs:
     secrets: inherit
     with:
       reviewer_ref: main
+      # The skills are in .claude/ in this very checkout. Installing them as a
+      # plugin would clone this private repository to fetch files already on
+      # disk. The fleet path still installs; this one does not need to.
+      install_skills: false

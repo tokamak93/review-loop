@@ -12,7 +12,6 @@
       "strict": false,
       "description": "Multi-pass pull request review, and the harvester that closes the loop.",
       "repository": "https://github.com/tokamak93/review-loop",
-      "license": "MIT",
       "skills": [
         "./.claude/skills/pr-review",
         "./.claude/skills/review-harvest"
