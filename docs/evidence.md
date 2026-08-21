@@ -9,10 +9,12 @@ What follows is a worked example: what the pipeline produced on one real change,
 | | |
 |---|---|
 | Date | 2026-08-21 |
-| Target | A private Go repository — the initial commit of a purchase-cart service: hexagonal layering, nine ADRs, three test files |
+| Target | [`tokamak93/subito-challenge`](https://github.com/tokamak93/subito-challenge) at [`487d608`](https://github.com/tokamak93/subito-challenge/commit/487d608) — the initial commit of a Go purchase-cart service: hexagonal layering, nine ADRs, three test files |
 | Size | 3,233 insertions across 35 files; ~2,379 reviewable after excluding generated Swagger and `go.sum` |
 | Effort | `medium`, gate `high`, learning off (no rules file exists) |
 | Cost | 397,932 tokens across 8 agents, ≈$1.70 — `docs/cost.md` |
+
+**Why this target.** It needed to be real Go with real structure — layers, interfaces, recorded decisions, a test suite — because half the pipeline is only exercised by a repository that has documents to cite and siblings to compare against. It is an old interview challenge, not a showcase, and it is linked at a pinned commit so it stays the thing that was reviewed regardless of what happens to it later. The subject here is the reviewer; the code is the fixture.
 
 **How it was run, precisely.** Not in CI. The pipeline was executed manually in a local Claude Code session: each agent spawned as a general-purpose subagent that read its own definition file from `.claude/agents/` and followed it, with the model pinned to match its frontmatter. Same instructions, same models, same order, same confidence rubric.
 
@@ -26,16 +28,20 @@ It differs from a real run in three ways that matter:
 
 Six specialists returned 11 findings. The verifier confirmed all 11. The gate dropped none. The cap posted 6.
 
-**Would have been posted:**
+**Would have been posted.** The target repository is public, so every one of these is checkable rather than merely asserted — the location column links to the line.
 
-| | Finding | Severity |
-|---|---|---|
-| 1 | VAT rounded half-up per unit then multiplied by quantity, so the rounding residual scales with quantity | high |
-| 2 | Goroutine fan-out driven by an unbounded client-supplied array; ADR 0008 claims batch sizing mitigates this, and it does not | high |
-| 3 | `Quantity` accepted with no upper bound and multiplied into persisted totals — `int64` overflow reachable from one request | medium |
-| 4 | Already-cancelled context makes `fetchProductsInParallel` return `(nil, nil)`, reported to the client as "product not found" | medium |
-| 5 | No timeout anywhere on the request path, against ADR 0008's claim that timeouts propagate | medium |
-| 6 | `Product.VATRate` is dead but reachable from the operator-facing catalog file via tagless JSON matching | medium |
+| | Finding | Severity | Where |
+|---|---|---|---|
+| 1 | VAT rounded half-up per unit then multiplied by quantity, so the rounding residual scales with quantity instead of being rounded once per line | high | [`order_service.go:84-87`](https://github.com/tokamak93/subito-challenge/blob/487d608/internal/core/service/order_service.go#L84-L87) |
+| 2 | Goroutine fan-out driven by an unbounded client-supplied array; ADR 0008 claims batch sizing mitigates this, and dividing by a constant does not bound anything | high | [`order_service.go:129-156`](https://github.com/tokamak93/subito-challenge/blob/487d608/internal/core/service/order_service.go#L129-L156) |
+| 3 | `Quantity` accepted with no upper bound and multiplied into persisted totals — `int64` overflow reachable from one request | medium | [`dto.go:11`](https://github.com/tokamak93/subito-challenge/blob/487d608/internal/handler/http/dto.go#L11) |
+| 4 | Already-cancelled context makes `fetchProductsInParallel` return `(nil, nil)`, which the caller reports to the client as "product not found" | medium | [`order_service.go:138-174`](https://github.com/tokamak93/subito-challenge/blob/487d608/internal/core/service/order_service.go#L138-L174) |
+| 5 | No timeout anywhere on the request path, against ADR 0008's claim that timeouts propagate to all goroutines | medium | [`main.go:81-84`](https://github.com/tokamak93/subito-challenge/blob/487d608/cmd/server/main.go#L81-L84) |
+| 6 | `Product.VATRate` is dead but reachable from the operator-facing catalog file via tagless JSON matching, so a per-SKU rate would be silently discarded | medium | [`model.go:26`](https://github.com/tokamak93/subito-challenge/blob/487d608/internal/core/domain/model.go#L26) |
+
+Two were checked by hand afterwards and both hold. Finding 1 diverges as claimed but **not in a fixed direction** — `+33` at price 127 rate 21% quantity 100, `-21` at price 101 same rate and quantity — and is exactly zero for both products in the shipped `configs/products.json`, so it is dormant on the seed data and live on any real catalog. Finding 4 was reproduced by a throwaway test: a pre-cancelled context returns `product not found` with the catalog gateway never called at all.
+
+That the direction is not fixed matters, because the specialist claimed "systematically over-collecting" and the verifier struck that word out on its own — see the confirmation-rate section below.
 
 **Dropped at the cap (5):** three test-quality findings, an error-leak, and the missing commit description.
 
@@ -43,7 +49,9 @@ Six specialists returned 11 findings. The verifier confirmed all 11. The gate dr
 
 ## What this does not show
 
-**That any of those six findings is correct.** They were confirmed by `pr-verify`, which is part of the system under evaluation, not an independent judge of it. Only the repository's author can say whether the VAT rounding is a real defect or an intended simplification. Until someone does, these are six claims.
+**That all six findings are correct.** They were confirmed by `pr-verify`, which is part of the system under evaluation, not an independent judge of it. Two were later checked by hand and hold; the other four have not been, and a finding holding up is not the same as a finding being *worth posting* — finding 6 may well be a fair reading of a field somebody meant to remove.
+
+That distinction is the whole reason the metric is defined the way it is. "Is this claim true" is answerable by reading the code. "Was this comment worth an engineer's attention" is only answerable by watching what an engineer did with it, which is why `accepted` requires a human to have acted and why none of this counts as precision.
 
 **Anything about precision.** Precision is `accepted / (accepted + rejected + ignored)`, and all three require a human to have seen a comment. Zero comments were posted. `.review/outcomes.jsonl` is empty and `go run ./cmd/metrics` on it returns "no records in range" — correctly.
 
